@@ -90,3 +90,10 @@ typings/
 
 # Electron-Forge
 out/
+
+# Build outputs
+*.dmg
+*.zip
+out/
+build/
+dist/
