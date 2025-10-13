@@ -1,6 +1,14 @@
 import dotenv from 'dotenv';
+import path from 'path';
 
-dotenv.config();
+// Load environment variables with proper path handling for Electron
+try {
+  if (process.env.NODE_ENV === 'development') {
+    dotenv.config({ path: path.join(process.cwd(), '.env') });
+  }
+} catch (error) {
+  console.warn('Could not load .env file:', error.message);
+}
 
 let openaiInstance: any = null;
 

@@ -12,7 +12,8 @@
     "lint": "eslint --ext .ts,.tsx .",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "test:build": "node test-build.js"
   },
   "keywords": [
     "knowledge-management",
@@ -46,7 +47,6 @@
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
     "@vitejs/plugin-react": "^4.0.0",
-    "drizzle-kit": "^0.31.5",
     "electron": "38.2.2",
     "eslint": "^8.57.1",
     "eslint-plugin-import": "^2.32.0",
@@ -55,10 +55,10 @@
     "vite": "^5.4.20"
   },
   "dependencies": {
+    "better-sqlite3": "^12.4.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.2",
-    "drizzle-orm": "^0.44.5",
     "electron-squirrel-startup": "^1.0.1",
     "lucide-react": "^0.544.0",
     "mammoth": "^1.6.0",
@@ -72,7 +72,9 @@
     "react-dom": "^18.2.0",
     "react-markdown": "^10.1.0",
     "react-syntax-highlighter": "^15.6.6",
+    "reflect-metadata": "^0.2.2",
     "remark-gfm": "^4.0.1",
-    "tailwind-merge": "^3.3.1"
+    "tailwind-merge": "^3.3.1",
+    "typeorm": "^0.3.27"
   }
 }

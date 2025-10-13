@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import { app, BrowserWindow, ipcMain, dialog, Menu, shell } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
@@ -5,8 +6,17 @@ import { CommonbaseService } from './lib/commonbase-service';
 import { resetOpenAI } from './lib/embeddings';
 import dotenv from 'dotenv';
 
-// Load environment variables
-dotenv.config();
+// Load environment variables with proper path handling for Electron
+try {
+  // In the main process, always try to load .env from app directory
+  const envPath = app.isPackaged
+    ? path.join(process.resourcesPath, '.env')
+    : path.join(process.cwd(), '.env');
+
+  dotenv.config({ path: envPath });
+} catch (error) {
+  console.warn('Could not load .env file in main process:', error.message);
+}
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -24,7 +34,7 @@ const createWindow = () => {
     minHeight: 600,
     titleBarStyle: 'hiddenInset',
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname || app.getAppPath(), 'preload.js'),
       contextIsolation: true,
       enableRemoteModule: false,
       nodeIntegration: false,
@@ -36,7 +46,7 @@ const createWindow = () => {
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
   } else {
     mainWindow.loadFile(
-      path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`),
+      path.join(__dirname || app.getAppPath(), `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`),
     );
   }
 
