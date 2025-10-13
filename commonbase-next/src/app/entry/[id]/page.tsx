@@ -348,10 +348,8 @@ export default function EntryPage() {
             data: commentText,
             metadata: {
               type: 'comment',
-              link: id,
               title: commentMetadata.title || entry?.metadata?.title,
-              source: commentMetadata.source || entry?.metadata?.source,
-              backlinks: [id]
+              source: commentMetadata.source || entry?.metadata?.source
             },
             link: id
           }),

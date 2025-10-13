@@ -107,8 +107,7 @@ export async function POST(request: NextRequest) {
       // Add parent metadata if this is a comment
       if (link) {
         metadata.isComment = true;
-        metadata.link = link;
-        metadata.backlinks = [link];
+        metadata.links = [link];
         if (parentTitle) metadata.title = parentTitle;
         if (parentSource) metadata.parentSource = parentSource;
       }
