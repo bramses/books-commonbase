@@ -2,6 +2,22 @@
 
 A desktop knowledge management application built with Electron that provides semantic search, intelligent file parsing, and a modern UI for managing your personal knowledge base.
 
+## 📥 One-Click Download & Install
+
+### **macOS (Apple Silicon & Intel)**
+🎉 **[Download Commonbase Desktop v1.0.0 for macOS](./Commonbase-Desktop-1.0.0-macOS.dmg)** (105 MB)
+
+**Installation Steps:**
+1. **Click the download link above** to download the DMG file
+2. **Double-click the DMG** to mount it
+3. **Drag Commonbase Desktop** to your Applications folder
+4. **Launch the app** from Applications or Spotlight
+5. **Follow the setup guide below** to configure your database and API key
+
+### **Other Platforms**
+- **Windows**: Build with `npm run make` on Windows (installer support included)
+- **Linux**: Build with `npm run make` on Linux (.deb and .rpm packages supported)
+
 ## Features
 
 - **🔍 Semantic Search**: Find entries using meaning, not just keywords
@@ -11,16 +27,59 @@ A desktop knowledge management application built with Electron that provides sem
 - **⚡ Local Database**: PostgreSQL with pgvector for fast semantic search
 - **🌙 Dark Mode**: Clean, modern interface with dark mode support
 - **🎯 Discovery Feed**: Serendipitous exploration of your knowledge base
+- **⚙️ Settings Page**: Configure OpenAI API key, database, and search thresholds
+- **🖼️ Image Analysis**: AI-powered image descriptions using OpenAI Vision
+- **💻 Code Syntax Highlighting**: Proper rendering for 25+ programming languages
 
-## Quick Start
+## 🚀 Quick Start (5 Minutes)
 
-### Prerequisites
+### **Step 1: Download & Install the App**
+1. **[Download the DMG file](./Commonbase-Desktop-1.0.0-macOS.dmg)** (click link above)
+2. **Double-click the DMG** and drag to Applications
+3. **Launch** Commonbase Desktop from Applications
+
+### **Step 2: Set Up Database (Required)**
+```bash
+# Install PostgreSQL + pgvector (one-time setup)
+brew install postgresql pgvector
+
+# Start PostgreSQL
+brew services start postgresql
+
+# Create the database
+createdb commonbase-electron
+psql commonbase-electron -c "CREATE EXTENSION IF NOT EXISTS vector;"
+```
+
+### **Step 3: Configure OpenAI API Key (Required)**
+1. **Get an OpenAI API key**: [Get API key here](https://platform.openai.com/api-keys)
+2. **Open Commonbase Desktop**
+3. **Click the Settings ⚙️ icon** in the sidebar
+4. **Enter your OpenAI API key** in the settings page
+5. **Click "Save Settings"**
+
+### **Step 4: Start Using!**
+- **Add files**: Drag & drop any file into the Add page
+- **Search**: Use text search or semantic search to find content
+- **Explore**: Browse the Feed page for discovery
+
+> **🎯 Pro Tip**: The app works best with a mix of text files, documents, and images. The AI will automatically describe images and extract text from PDFs!
+
+### **🔧 Quick Troubleshooting**
+- **"App can't be opened"**: Right-click → Open → Open (macOS security)
+- **Database connection error**: Check if PostgreSQL is running: `brew services list | grep postgresql`
+- **OpenAI API errors**: Verify your API key has credits and permissions
+- **App won't start**: Check Console.app for error messages
+
+### For Developers (Build from Source)
+
+#### Prerequisites
 
 1. **Node.js 18+** - [Download here](https://nodejs.org/)
 2. **PostgreSQL with pgvector** - [Installation guide](https://github.com/pgvector/pgvector#installation)
 3. **OpenAI API Key** - For generating embeddings
 
-### Installation
+#### Installation
 
 1. Clone and navigate to the project:
    ```bash

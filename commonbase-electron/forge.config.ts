@@ -1,24 +1,70 @@
 import type { ForgeConfig } from '@electron-forge/shared-types';
 import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 import { MakerZIP } from '@electron-forge/maker-zip';
+import { MakerDMG } from '@electron-forge/maker-dmg';
 import { MakerDeb } from '@electron-forge/maker-deb';
 import { MakerRpm } from '@electron-forge/maker-rpm';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
+import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
 
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
+    appBundleId: 'com.bramadams.commonbase-desktop',
+    appCategoryType: 'public.app-category.productivity',
+    protocols: [
+      {
+        name: 'commonbase',
+        schemes: ['commonbase']
+      }
+    ]
+    // Note: Signing and notarization commented out for initial release
+    // Uncomment and configure for production releases:
+    // osxSign: {
+    //   identity: 'Developer ID Application: Bram Adams'
+    // },
+    // osxNotarize: {
+    //   tool: 'notarytool',
+    //   appleId: process.env.APPLE_ID || '',
+    //   appleIdPassword: process.env.APPLE_ID_PASSWORD || '',
+    //   teamId: process.env.APPLE_TEAM_ID || ''
+    // }
   },
   rebuildConfig: {},
   makers: [
-    new MakerSquirrel({}),
-    new MakerZIP({}, ['darwin']),
-    new MakerRpm({}),
-    new MakerDeb({}),
+    // macOS DMG
+    new MakerDMG({
+      format: 'ULFO'
+    }, ['darwin']),
+    // Windows Squirrel installer
+    new MakerSquirrel({
+      name: 'commonbase_desktop',
+      authors: 'Bram Adams',
+      exe: 'Commonbase Desktop.exe',
+      description: 'Desktop knowledge management system with semantic search and file parsing'
+    }, ['win32']),
+    // ZIP for manual installation
+    new MakerZIP({}, ['darwin', 'linux']),
+    // Linux packages
+    new MakerRpm({
+      options: {
+        maintainer: 'Bram Adams',
+        homepage: 'https://github.com/bramses/commonbase-electron'
+      }
+    }, ['linux']),
+    new MakerDeb({
+      options: {
+        maintainer: 'Bram Adams <3282661+bramses@users.noreply.github.com>',
+        homepage: 'https://github.com/bramses/commonbase-electron'
+      }
+    }, ['linux']),
   ],
   plugins: [
+    new AutoUnpackNativesPlugin({
+      unpackNatives: true,
+    }),
     new VitePlugin({
       // `build` can specify multiple entry builds, which can be Main process, Preload scripts, Worker process, etc.
       // If you are familiar with Vite configuration, it will look really familiar.

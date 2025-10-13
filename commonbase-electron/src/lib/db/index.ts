@@ -1,5 +1,3 @@
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { Pool } from 'pg';
 import * as schema from './schema';
 import dotenv from 'dotenv';
 
@@ -8,9 +6,29 @@ dotenv.config();
 
 const databaseUrl = process.env.DATABASE_URL || 'postgresql://localhost:5432/commonbase-electron';
 
-const pool = new Pool({
-  connectionString: databaseUrl,
+let dbInstance: any = null;
+
+// Lazy database connection to avoid circular dependencies
+export const getDb = () => {
+  if (!dbInstance) {
+    // Lazy import to avoid bundling issues
+    const { drizzle } = require('drizzle-orm/node-postgres');
+    const { Pool } = require('pg');
+
+    const pool = new Pool({
+      connectionString: databaseUrl,
+    });
+
+    dbInstance = drizzle(pool, { schema });
+  }
+  return dbInstance;
+};
+
+// Export for backward compatibility
+export const db = new Proxy({}, {
+  get(_target, prop) {
+    return getDb()[prop];
+  }
 });
 
-export const db = drizzle(pool, { schema });
 export * from './schema';

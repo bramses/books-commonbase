@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, dialog, Menu, shell } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import { CommonbaseService } from './lib/commonbase-service';
+import { resetOpenAI } from './lib/embeddings';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -294,6 +295,70 @@ ipcMain.handle('file:get-image-data', async (event, filePath: string) => {
 
     return `data:${mimeType};base64,${base64Data}`;
   } catch (error) {
+    throw error;
+  }
+});
+
+// Settings management
+const getSettingsPath = () => {
+  const os = require('os');
+  const path = require('path');
+  const settingsDir = path.join(os.homedir(), '.commonbase-electron');
+  const fs = require('fs');
+
+  if (!fs.existsSync(settingsDir)) {
+    fs.mkdirSync(settingsDir, { recursive: true });
+  }
+
+  return path.join(settingsDir, 'settings.json');
+};
+
+const getDefaultSettings = () => ({
+  openaiApiKey: process.env.OPENAI_API_KEY || '',
+  databaseUrl: process.env.DATABASE_URL || 'postgresql://localhost:5432/commonbase-electron',
+  semanticSearchThreshold: 0.7,
+  semanticSearchLimit: 20
+});
+
+ipcMain.handle('settings:get', async () => {
+  try {
+    const fs = require('fs');
+    const settingsPath = getSettingsPath();
+
+    if (fs.existsSync(settingsPath)) {
+      const settingsData = fs.readFileSync(settingsPath, 'utf-8');
+      const savedSettings = JSON.parse(settingsData);
+      return { ...getDefaultSettings(), ...savedSettings };
+    }
+
+    return getDefaultSettings();
+  } catch (error) {
+    console.error('Failed to load settings:', error);
+    return getDefaultSettings();
+  }
+});
+
+ipcMain.handle('settings:save', async (event, settings) => {
+  try {
+    const fs = require('fs');
+    const settingsPath = getSettingsPath();
+
+    fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+
+    // Update process environment variables
+    if (settings.openaiApiKey) {
+      process.env.OPENAI_API_KEY = settings.openaiApiKey;
+    }
+    if (settings.databaseUrl) {
+      process.env.DATABASE_URL = settings.databaseUrl;
+    }
+
+    // Reset OpenAI client so it uses the new API key
+    resetOpenAI();
+
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to save settings:', error);
     throw error;
   }
 });

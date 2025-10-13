@@ -161,12 +161,32 @@ export class CommonbaseService {
     }
   }
 
-  static async semanticSearch(query: string, limit = 20): Promise<CommonbaseEntry[]> {
+  static async semanticSearch(query: string, limit?: number, threshold?: number): Promise<CommonbaseEntry[]> {
     try {
+      // Get settings from environment or defaults
+      const fs = require('fs');
+      const os = require('os');
+      const path = require('path');
+
+      let settings = { semanticSearchLimit: 20, semanticSearchThreshold: 0.7 };
+      try {
+        const settingsPath = path.join(os.homedir(), '.commonbase-electron', 'settings.json');
+        if (fs.existsSync(settingsPath)) {
+          const settingsData = fs.readFileSync(settingsPath, 'utf-8');
+          const savedSettings = JSON.parse(settingsData);
+          settings = { ...settings, ...savedSettings };
+        }
+      } catch (e) {
+        // Use defaults if settings can't be loaded
+      }
+
+      const finalLimit = limit || settings.semanticSearchLimit;
+      const finalThreshold = threshold || settings.semanticSearchThreshold;
+
       // Generate embedding for the query
       const queryEmbedding = await generateEmbedding(query);
 
-      // Use pgvector similarity search
+      // Use pgvector similarity search with threshold
       const results = await db
         .select({
           id: commonbase.id,
@@ -178,8 +198,9 @@ export class CommonbaseService {
         })
         .from(commonbase)
         .innerJoin(embeddings, eq(commonbase.id, embeddings.id))
+        .where(sql`(1 - (${embeddings.embedding} <=> ${JSON.stringify(queryEmbedding)})) >= ${finalThreshold}`)
         .orderBy(sql`${embeddings.embedding} <=> ${JSON.stringify(queryEmbedding)}`)
-        .limit(limit);
+        .limit(finalLimit);
 
       return results;
     } catch (error) {
@@ -250,8 +271,28 @@ export class CommonbaseService {
     }
   }
 
-  static async getSimilarEntries(entryId: string, limit = 5): Promise<CommonbaseEntry[]> {
+  static async getSimilarEntries(entryId: string, limit?: number, threshold?: number): Promise<CommonbaseEntry[]> {
     try {
+      // Get settings from environment or defaults
+      const fs = require('fs');
+      const os = require('os');
+      const path = require('path');
+
+      let settings = { semanticSearchLimit: 5, semanticSearchThreshold: 0.7 };
+      try {
+        const settingsPath = path.join(os.homedir(), '.commonbase-electron', 'settings.json');
+        if (fs.existsSync(settingsPath)) {
+          const settingsData = fs.readFileSync(settingsPath, 'utf-8');
+          const savedSettings = JSON.parse(settingsData);
+          settings = { ...settings, ...savedSettings };
+        }
+      } catch (e) {
+        // Use defaults if settings can't be loaded
+      }
+
+      const finalLimit = limit || settings.semanticSearchLimit;
+      const finalThreshold = threshold || settings.semanticSearchThreshold;
+
       // Get the embedding for the current entry
       const [entryEmbedding] = await db
         .select({ embedding: embeddings.embedding })
@@ -262,7 +303,7 @@ export class CommonbaseService {
         return [];
       }
 
-      // Find similar entries using cosine similarity
+      // Find similar entries using cosine similarity with threshold
       const results = await db
         .select({
           id: commonbase.id,
@@ -274,9 +315,9 @@ export class CommonbaseService {
         })
         .from(commonbase)
         .innerJoin(embeddings, eq(commonbase.id, embeddings.id))
-        .where(sql`${commonbase.id} != ${entryId}`)
+        .where(sql`${commonbase.id} != ${entryId} AND (1 - (${embeddings.embedding} <=> ${JSON.stringify(entryEmbedding.embedding)})) >= ${finalThreshold}`)
         .orderBy(sql`${embeddings.embedding} <=> ${JSON.stringify(entryEmbedding.embedding)}`)
-        .limit(limit);
+        .limit(finalLimit);
 
       return results;
     } catch (error) {

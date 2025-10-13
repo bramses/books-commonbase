@@ -5,10 +5,11 @@ import {
   Search,
   List,
   Shuffle,
-  FileText
+  FileText,
+  Settings
 } from 'lucide-react';
 
-type Page = 'home' | 'add' | 'search' | 'ledger' | 'feed' | 'entry';
+type Page = 'home' | 'add' | 'search' | 'ledger' | 'feed' | 'entry' | 'settings';
 
 interface NavigationProps {
   currentPage: Page;
@@ -61,6 +62,21 @@ const Navigation: React.FC<NavigationProps> = ({ currentPage, navigateTo }) => {
             );
           })}
         </ul>
+
+        {/* Settings at bottom */}
+        <div className="mt-8">
+          <button
+            onClick={() => navigateTo('settings')}
+            className={`w-full flex items-center space-x-3 px-4 py-3 text-left rounded-lg transition-colors ${
+              currentPage === 'settings'
+                ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+            }`}
+          >
+            <Settings className="h-5 w-5" />
+            <span className="font-medium">Settings</span>
+          </button>
+        </div>
 
         <div className="mt-8 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
           <p className="text-sm text-gray-600 dark:text-gray-400">

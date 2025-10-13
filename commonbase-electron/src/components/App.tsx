@@ -6,8 +6,9 @@ import SearchPage from './pages/SearchPage';
 import LedgerPage from './pages/LedgerPage';
 import FeedPage from './pages/FeedPage';
 import EntryPage from './pages/EntryPage';
+import SettingsPage from './pages/SettingsPage';
 
-type Page = 'home' | 'add' | 'search' | 'ledger' | 'feed' | 'entry';
+type Page = 'home' | 'add' | 'search' | 'ledger' | 'feed' | 'entry' | 'settings';
 
 interface AppState {
   currentPage: Page;
@@ -72,6 +73,8 @@ const App: React.FC = () => {
         return <FeedPage navigateTo={navigateTo} />;
       case 'entry':
         return <EntryPage entryId={appState.selectedEntryId} navigateTo={navigateTo} />;
+      case 'settings':
+        return <SettingsPage navigateTo={navigateTo} />;
       default:
         return <HomePage navigateTo={navigateTo} />;
     }

@@ -60,6 +60,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getImageData: (filePath: string) =>
     ipcRenderer.invoke('file:get-image-data', filePath),
 
+  // Settings operations
+  getSettings: () =>
+    ipcRenderer.invoke('settings:get'),
+
+  saveSettings: (settings: any) =>
+    ipcRenderer.invoke('settings:save', settings),
+
   // Navigation events
   onNavigateTo: (callback: (route: string) => void) => {
     ipcRenderer.on('navigate-to', (event, route) => callback(route));
@@ -98,6 +105,8 @@ declare global {
       getFileStats: (filePath: string) => Promise<{ size: number; type: string; lastModified: string }>;
       revealInFinder: (filePath: string) => Promise<void>;
       getImageData: (filePath: string) => Promise<string>;
+      getSettings: () => Promise<any>;
+      saveSettings: (settings: any) => Promise<{ success: boolean }>;
       onNavigateTo: (callback: (route: string) => void) => void;
       onFilesAdded: (callback: (count: number) => void) => void;
       onFileAdded: (callback: (filePath: string) => void) => void;
