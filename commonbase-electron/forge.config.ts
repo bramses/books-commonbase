@@ -11,7 +11,7 @@ import { FuseV1Options, FuseVersion } from '@electron/fuses';
 
 const config: ForgeConfig = {
   packagerConfig: {
-    asar: false,
+    asar: true,
     appBundleId: 'com.bramadams.commonbase-desktop',
     appCategoryType: 'public.app-category.productivity',
     protocols: [
