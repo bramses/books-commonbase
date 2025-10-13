@@ -1,10 +1,11 @@
-import 'reflect-metadata';
+console.log('🚀 Starting Commonbase Desktop main process');
 import { app, BrowserWindow, ipcMain, dialog, Menu, shell } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import { CommonbaseService } from './lib/commonbase-service';
 import { resetOpenAI } from './lib/embeddings';
 import dotenv from 'dotenv';
+console.log('📦 All imports loaded successfully');
 
 // Load environment variables with proper path handling for Electron
 try {
@@ -19,9 +20,13 @@ try {
 }
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
-if (started) {
+console.log('🔍 Squirrel startup check result:', started);
+console.log('🖥️ Platform:', process.platform);
+if (started && process.platform === 'win32') {
+  console.log('🚪 Squirrel startup detected on Windows, quitting app');
   app.quit();
 }
+console.log('🎯 Main process initialization continuing...');
 
 let mainWindow: BrowserWindow;
 
@@ -36,7 +41,6 @@ const createWindow = () => {
     webPreferences: {
       preload: path.join(__dirname || app.getAppPath(), 'preload.js'),
       contextIsolation: true,
-      enableRemoteModule: false,
       nodeIntegration: false,
     },
   });
@@ -143,7 +147,7 @@ async function selectAndAddFile() {
 }
 
 // IPC Handlers
-ipcMain.handle('commonbase:add-entry', async (event, data: string, metadata: any, embedding?: number[]) => {
+ipcMain.handle('commonbase:add-entry', async (_event, data: string, metadata: any, embedding?: number[]) => {
   try {
     return await CommonbaseService.addEntry(data, metadata, embedding);
   } catch (error) {
@@ -151,7 +155,7 @@ ipcMain.handle('commonbase:add-entry', async (event, data: string, metadata: any
   }
 });
 
-ipcMain.handle('commonbase:add-file', async (event, filePath: string) => {
+ipcMain.handle('commonbase:add-file', async (_event, filePath: string) => {
   try {
     return await CommonbaseService.addFileEntry(filePath);
   } catch (error) {
@@ -159,7 +163,7 @@ ipcMain.handle('commonbase:add-file', async (event, filePath: string) => {
   }
 });
 
-ipcMain.handle('commonbase:get-entry', async (event, id: string) => {
+ipcMain.handle('commonbase:get-entry', async (_event, id: string) => {
   try {
     return await CommonbaseService.getEntry(id);
   } catch (error) {
@@ -167,7 +171,7 @@ ipcMain.handle('commonbase:get-entry', async (event, id: string) => {
   }
 });
 
-ipcMain.handle('commonbase:update-entry', async (event, id: string, data?: string, metadata?: any) => {
+ipcMain.handle('commonbase:update-entry', async (_event, id: string, data?: string, metadata?: any) => {
   try {
     return await CommonbaseService.updateEntry(id, data, metadata);
   } catch (error) {
@@ -175,7 +179,7 @@ ipcMain.handle('commonbase:update-entry', async (event, id: string, data?: strin
   }
 });
 
-ipcMain.handle('commonbase:delete-entry', async (event, id: string) => {
+ipcMain.handle('commonbase:delete-entry', async (_event, id: string) => {
   try {
     return await CommonbaseService.deleteEntry(id);
   } catch (error) {
@@ -183,7 +187,7 @@ ipcMain.handle('commonbase:delete-entry', async (event, id: string) => {
   }
 });
 
-ipcMain.handle('commonbase:list-entries', async (event, offset = 0, limit = 50) => {
+ipcMain.handle('commonbase:list-entries', async (_event, offset = 0, limit = 50) => {
   try {
     return await CommonbaseService.listEntries(offset, limit);
   } catch (error) {
@@ -191,7 +195,7 @@ ipcMain.handle('commonbase:list-entries', async (event, offset = 0, limit = 50) 
   }
 });
 
-ipcMain.handle('commonbase:search', async (event, query: string, limit = 20) => {
+ipcMain.handle('commonbase:search', async (_event, query: string, limit = 20) => {
   try {
     return await CommonbaseService.searchEntries(query, limit);
   } catch (error) {
@@ -199,7 +203,7 @@ ipcMain.handle('commonbase:search', async (event, query: string, limit = 20) => 
   }
 });
 
-ipcMain.handle('commonbase:semantic-search', async (event, query: string, limit = 20) => {
+ipcMain.handle('commonbase:semantic-search', async (_event, query: string, limit = 20) => {
   try {
     return await CommonbaseService.semanticSearch(query, limit);
   } catch (error) {
@@ -207,7 +211,7 @@ ipcMain.handle('commonbase:semantic-search', async (event, query: string, limit 
   }
 });
 
-ipcMain.handle('commonbase:random-entries', async (event, limit = 10) => {
+ipcMain.handle('commonbase:random-entries', async (_event, limit = 10) => {
   try {
     return await CommonbaseService.getRandomEntries(limit);
   } catch (error) {
@@ -215,7 +219,7 @@ ipcMain.handle('commonbase:random-entries', async (event, limit = 10) => {
   }
 });
 
-ipcMain.handle('commonbase:link-entries', async (event, parentId: string, childId: string) => {
+ipcMain.handle('commonbase:link-entries', async (_event, parentId: string, childId: string) => {
   try {
     return await CommonbaseService.linkEntries(parentId, childId);
   } catch (error) {
@@ -223,7 +227,7 @@ ipcMain.handle('commonbase:link-entries', async (event, parentId: string, childI
   }
 });
 
-ipcMain.handle('commonbase:get-similar-entries', async (event, entryId: string, limit = 5) => {
+ipcMain.handle('commonbase:get-similar-entries', async (_event, entryId: string, limit = 5) => {
   try {
     return await CommonbaseService.getSimilarEntries(entryId, limit);
   } catch (error) {
@@ -246,7 +250,7 @@ ipcMain.handle('dialog:select-file', async () => {
   return result;
 });
 
-ipcMain.handle('file:get-stats', async (event, filePath: string) => {
+ipcMain.handle('file:get-stats', async (_event, filePath: string) => {
   try {
     const fs = require('fs');
     const mime = require('mime');
@@ -262,7 +266,7 @@ ipcMain.handle('file:get-stats', async (event, filePath: string) => {
   }
 });
 
-ipcMain.handle('file:reveal-in-finder', async (event, filePath: string) => {
+ipcMain.handle('file:reveal-in-finder', async (_event, filePath: string) => {
   try {
     const fs = require('fs');
     if (fs.existsSync(filePath)) {
@@ -275,7 +279,7 @@ ipcMain.handle('file:reveal-in-finder', async (event, filePath: string) => {
   }
 });
 
-ipcMain.handle('file:get-image-data', async (event, filePath: string) => {
+ipcMain.handle('file:get-image-data', async (_event, filePath: string) => {
   try {
     const fs = require('fs');
     const path = require('path');
@@ -348,7 +352,7 @@ ipcMain.handle('settings:get', async () => {
   }
 });
 
-ipcMain.handle('settings:save', async (event, settings) => {
+ipcMain.handle('settings:save', async (_event, settings) => {
   try {
     const fs = require('fs');
     const settingsPath = getSettingsPath();
@@ -396,7 +400,7 @@ app.on('activate', () => {
 });
 
 // Handle file drops on the dock icon (macOS)
-app.on('open-file', async (event, filePath) => {
+app.on('open-file', async (_event, filePath) => {
   event.preventDefault();
   try {
     await CommonbaseService.addFileEntry(filePath);
