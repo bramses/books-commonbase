@@ -8,10 +8,14 @@
 
 ## Database Setup
 
+0. Open PSQL with `psql`
+
 1. Create a PostgreSQL database:
    ```sql
    CREATE DATABASE commonbase;
    ```
+
+a. `\q` out and connect to your new DB: `psql postgresql://localhost:5432/commonbase`
 
 2. Enable the pgvector extension:
    ```sql
@@ -25,7 +29,7 @@
 
 Copy `.env.local` and update:
 ```bash
-DATABASE_URL=postgresql://username:password@localhost:5432/commonbase
+DATABASE_URL=postgresql://username:password@localhost:5432/commonbase // local is postgresql://localhost:5432/commonbase
 OPENAI_API_KEY=your_openai_api_key_here
 EMBEDDING_DIMENSIONS=1536
 ```
