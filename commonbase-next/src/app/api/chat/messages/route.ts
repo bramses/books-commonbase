@@ -7,41 +7,124 @@ import { sql } from 'drizzle-orm'
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
-  const limit = parseInt(searchParams.get('limit') || '50')
-  const before = searchParams.get('before') // For pagination
+  const limit = parseInt(searchParams.get('limit') || '100')
+  const before = searchParams.get('before') // For loading older messages
+  const after = searchParams.get('after') // For loading newer messages
+  const around = searchParams.get('around') // For loading messages around a specific message ID
   const search = searchParams.get('search')
 
+  console.log('📥 GET /api/chat/messages', {
+    limit,
+    before,
+    after,
+    around,
+    search
+  })
+
   try {
-    let query = db
-      .select({
-        id: messages.id,
-        text: messages.text,
-        createdAt: messages.createdAt,
-        updatedAt: messages.updatedAt,
-        replyToId: messages.replyToId,
-        commonbaseId: messages.commonbaseId,
-        user: {
-          id: users.id,
-          name: users.name,
-          email: users.email,
-          image: users.image,
-        }
-      })
-      .from(messages)
-      .leftJoin(users, eq(messages.userId, users.id))
-      .orderBy(desc(messages.createdAt))
-      .limit(limit)
+    let messageList: any[]
 
-    if (before) {
-      // Add where clause for pagination
-      query = query.where(sql`${messages.createdAt} < ${before}`)
+    // Handle different pagination scenarios
+    if (around) {
+      // Load messages around a specific message ID
+      const aroundMessage = await db
+        .select({ createdAt: messages.createdAt })
+        .from(messages)
+        .where(eq(messages.id, around))
+        .limit(1)
+
+      if (aroundMessage.length > 0) {
+        const targetTime = aroundMessage[0].createdAt
+        const halfLimit = Math.floor(limit / 2)
+
+        // Get older messages (before target)
+        const olderMessages = await db
+          .select({
+            id: messages.id,
+            text: messages.text,
+            createdAt: messages.createdAt,
+            updatedAt: messages.updatedAt,
+            replyToId: messages.replyToId,
+            commonbaseId: messages.commonbaseId,
+            user: {
+              id: users.id,
+              name: users.name,
+              email: users.email,
+              image: users.image,
+            }
+          })
+          .from(messages)
+          .leftJoin(users, eq(messages.userId, users.id))
+          .where(sql`${messages.createdAt} < ${targetTime}`)
+          .orderBy(desc(messages.createdAt))
+          .limit(halfLimit)
+
+        // Get newer messages (after target, including target)
+        const newerMessages = await db
+          .select({
+            id: messages.id,
+            text: messages.text,
+            createdAt: messages.createdAt,
+            updatedAt: messages.updatedAt,
+            replyToId: messages.replyToId,
+            commonbaseId: messages.commonbaseId,
+            user: {
+              id: users.id,
+              name: users.name,
+              email: users.email,
+              image: users.image,
+            }
+          })
+          .from(messages)
+          .leftJoin(users, eq(messages.userId, users.id))
+          .where(sql`${messages.createdAt} >= ${targetTime}`)
+          .orderBy(messages.createdAt)
+          .limit(halfLimit + 1)
+
+        // Combine and sort
+        const combinedMessages = [...olderMessages.reverse(), ...newerMessages]
+        messageList = combinedMessages.sort((a, b) =>
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        )
+      } else {
+        messageList = []
+      }
+    } else {
+      // Regular pagination
+      let query = db
+        .select({
+          id: messages.id,
+          text: messages.text,
+          createdAt: messages.createdAt,
+          updatedAt: messages.updatedAt,
+          replyToId: messages.replyToId,
+          commonbaseId: messages.commonbaseId,
+          user: {
+            id: users.id,
+            name: users.name,
+            email: users.email,
+            image: users.image,
+          }
+        })
+        .from(messages)
+        .leftJoin(users, eq(messages.userId, users.id))
+        .orderBy(desc(messages.createdAt))
+        .limit(limit)
+
+      if (before) {
+        query = query.where(sql`${messages.createdAt} < ${before}`)
+      }
+
+      if (after) {
+        query = query.where(sql`${messages.createdAt} > ${after}`)
+      }
+
+      if (search) {
+        query = query.where(ilike(messages.text, `%${search}%`))
+      }
+
+      messageList = await query
     }
-
-    if (search) {
-      query = query.where(ilike(messages.text, `%${search}%`))
-    }
-
-    const messageList = await query
 
     // Get mentions for each message
     const messagesWithMentions = await Promise.all(
@@ -64,9 +147,22 @@ export async function GET(request: NextRequest) {
       })
     )
 
+    // Determine if there are more messages available
+    const hasMoreOld = around ? false : messageList.length === limit
+    const oldestMessage = messagesWithMentions.length > 0 ? messagesWithMentions[0] : null
+    const newestMessage = messagesWithMentions.length > 0 ? messagesWithMentions[messagesWithMentions.length - 1] : null
+
     return NextResponse.json({
       messages: messagesWithMentions,
-      hasMore: messageList.length === limit
+      pagination: {
+        hasMore: hasMoreOld, // For backwards compatibility
+        hasMoreOld,
+        oldestTimestamp: oldestMessage?.createdAt,
+        newestTimestamp: newestMessage?.createdAt,
+        count: messagesWithMentions.length,
+        limit,
+        mode: around ? 'around' : before ? 'before' : after ? 'after' : 'latest'
+      }
     })
   } catch (error) {
     console.error('Error fetching messages:', error)

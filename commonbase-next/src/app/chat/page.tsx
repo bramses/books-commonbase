@@ -47,13 +47,16 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [hasMoreOld, setHasMoreOld] = useState(true)
+  const [isAtPresent, setIsAtPresent] = useState(true)
+  const [oldestTimestamp, setOldestTimestamp] = useState<string | null>(null)
+  const [newestTimestamp, setNewestTimestamp] = useState<string | null>(null)
   const [replyingTo, setReplyingTo] = useState<Message | null>(null)
   const [editingMessage, setEditingMessage] = useState<Message | null>(null)
   const [editText, setEditText] = useState('')
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-  const [isScrolling, setIsScrolling] = useState(false)
-  const isScrollingRef = useRef(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Format timestamp with user's browser timezone
@@ -97,17 +100,115 @@ export default function ChatPage() {
     return formatted
   }
 
-  const fetchMessages = async () => {
+  const fetchMessages = async (options?: {
+    before?: string,
+    after?: string,
+    around?: string,
+    append?: boolean,
+    isPolling?: boolean
+  }) => {
     try {
-      const response = await fetch('/api/chat/messages')
+      const params = new URLSearchParams()
+      if (options?.before) params.set('before', options.before)
+      if (options?.after) params.set('after', options.after)
+      if (options?.around) params.set('around', options.around)
+      params.set('limit', '100')
+
+      console.log('📥 Fetching messages with params:', Object.fromEntries(params))
+
+      const response = await fetch(`/api/chat/messages?${params}`)
       if (!response.ok) throw new Error('Failed to fetch messages')
 
       const data = await response.json()
-      setMessages(data.messages.reverse()) // Reverse to show oldest first
+      console.log('📥 Received messages:', data.pagination)
+
+      // Handle different loading scenarios
+      if (options?.around) {
+        // Loading around a specific message - replace all messages
+        setMessages(data.messages)
+        setIsAtPresent(false)
+      } else if (options?.append && options?.before) {
+        // Loading older messages - prepend to existing messages
+        const newOldMessages = data.messages.filter(
+          (newMsg: Message) => !messages.some(existingMsg => existingMsg.id === newMsg.id)
+        )
+        setMessages(prev => [...newOldMessages, ...prev])
+      } else if (options?.isPolling && messages.length > 0) {
+        // Polling - only add new messages, don't replace all
+        const newMessages = data.messages.reverse().filter(
+          (newMsg: Message) => !messages.some(existingMsg => existingMsg.id === newMsg.id)
+        )
+        if (newMessages.length > 0) {
+          console.log('📥 Adding', newMessages.length, 'new messages from polling')
+          setMessages(prev => [...prev, ...newMessages])
+        }
+      } else {
+        // Initial load - replace all messages and reverse for chronological order
+        setMessages(data.messages.reverse())
+      }
+
+      // Update pagination metadata
+      setHasMoreOld(data.pagination.hasMoreOld)
+      setOldestTimestamp(data.pagination.oldestTimestamp)
+      setNewestTimestamp(data.pagination.newestTimestamp)
+
     } catch (error) {
       setError('Failed to load messages')
       console.error('Error fetching messages:', error)
     }
+  }
+
+  const loadMoreOldMessages = async () => {
+    if (!hasMoreOld || isLoadingMore || !oldestTimestamp) return
+
+    setIsLoadingMore(true)
+    await fetchMessages({ before: oldestTimestamp, append: true })
+    setIsLoadingMore(false)
+  }
+
+  const scrollToPresent = async () => {
+    setIsLoading(true)
+    await fetchMessages() // Load latest messages
+    setIsAtPresent(true)
+    setIsLoading(false)
+
+    // Scroll to bottom
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }, 100)
+  }
+
+  const scrollToMessage = async (messageId: string) => {
+    // Check if message is already in current view
+    const existingElement = document.getElementById(`message-${messageId}`)
+    if (existingElement) {
+      existingElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      // Highlight the message temporarily
+      existingElement.classList.add('bg-yellow-100', 'dark:bg-yellow-900')
+      setTimeout(() => {
+        existingElement.classList.remove('bg-yellow-100', 'dark:bg-yellow-900')
+      }, 3000)
+      return
+    }
+
+    // Load messages around this message
+    setIsLoading(true)
+    await fetchMessages({ around: messageId })
+    setIsAtPresent(false)
+    setIsLoading(false)
+
+    // Scroll to the message after a brief delay for rendering
+    setTimeout(() => {
+      const element = document.getElementById(`message-${messageId}`)
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        // Highlight the message temporarily
+        element.classList.add('bg-yellow-100', 'dark:bg-yellow-900')
+        setTimeout(() => {
+          element.classList.remove('bg-yellow-100', 'dark:bg-yellow-900')
+        }, 3000)
+      }
+    }, 200)
   }
 
   const fetchCurrentUser = async () => {
@@ -259,62 +360,6 @@ export default function ChatPage() {
     }
   }
 
-  const scrollToMessage = (messageId: string) => {
-    console.log('🎯 SCROLL TO MESSAGE START:', messageId)
-
-    // First try exact match
-    const exactElementId = `message-${messageId}`
-    console.log('🔍 Looking for exact element ID:', exactElementId)
-    let element = document.getElementById(exactElementId)
-    console.log('📍 Exact element found:', !!element)
-
-    // If exact match fails, try partial match (for shortened IDs in replies)
-    if (!element) {
-      console.log('🔍 Trying partial match for messageId:', messageId)
-      const allMessages = document.querySelectorAll('[id^="message-"]')
-      console.log('📊 Found', allMessages.length, 'message elements')
-
-      for (const messageElement of allMessages) {
-        const fullId = messageElement.id
-        // Extract the UUID part after "message-"
-        const fullMessageId = fullId.substring(8) // Remove "message-" prefix
-        console.log('🔍 Checking if', fullMessageId, 'starts with', messageId)
-
-        if (fullMessageId.startsWith(messageId)) {
-          element = messageElement as HTMLElement
-          console.log('✅ Found partial match:', fullId)
-          break
-        }
-      }
-    }
-
-    if (element) {
-      console.log('🚫 Setting scroll lock...')
-      setIsScrolling(true)
-      isScrollingRef.current = true
-
-      console.log('📜 Scrolling to element:', element.id)
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-
-      console.log('🟡 Adding highlight classes...')
-      element.classList.add('bg-yellow-200', 'ring-2', 'ring-yellow-400')
-      console.log('✅ Classes added:', element.className)
-
-      // Remove highlight and unlock scrolling after 3 seconds
-      setTimeout(() => {
-        console.log('🔄 Removing highlight and unlocking scroll...')
-        element.classList.remove('bg-yellow-200', 'ring-2', 'ring-yellow-400')
-        setIsScrolling(false)
-        isScrollingRef.current = false
-        console.log('✅ Scroll unlock complete')
-      }, 3000)
-    } else {
-      console.error('❌ No element found for messageId:', messageId)
-      console.log('🔍 Available message elements:')
-      const allMessages = document.querySelectorAll('[id^="message-"]')
-      allMessages.forEach(el => console.log(' - Found:', el.id))
-    }
-  }
 
   const formatMessageText = (text: string, mentions: Mention[] | undefined) => {
     let formattedText = text
@@ -411,40 +456,55 @@ export default function ChatPage() {
 
     // Set up polling for new messages (simple real-time simulation)
     const interval = setInterval(() => {
-      if (!isScrollingRef.current) {
-        console.log('📡 Polling for messages...')
-        fetchMessages()
-      } else {
-        console.log('⏸️ Skipping poll - scrolling in progress')
-      }
+      console.log('📡 Polling for messages (no auto-scroll)...')
+      fetchMessages({ isPolling: true }) // Only add new messages, don't replace all
     }, 5000)
     return () => clearInterval(interval)
-  }, []) // Remove dependency to prevent constant re-initialization
+  }, []) // No dependencies - just poll continuously
 
   // Check URL params for message highlighting (only on initial load)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const highlightId = params.get('highlight')
 
-    if (highlightId && messages.length > 0) {
-      // Only highlight once when messages first load
-      const element = document.getElementById(`message-${highlightId}`)
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        element.classList.add('bg-yellow-200', 'ring-2', 'ring-yellow-400')
+    if (highlightId && messages.length === 0) {
+      // Load messages around the highlighted message instead of default latest
+      console.log('🎯 Loading messages around highlighted message:', highlightId)
+      scrollToMessage(highlightId)
 
-        // Remove highlight after 3 seconds
-        setTimeout(() => {
-          element.classList.remove('bg-yellow-200', 'ring-2', 'ring-yellow-400')
-        }, 3000)
-
-        // Remove the highlight parameter from URL so it doesn't repeat
-        const url = new URL(window.location.href)
-        url.searchParams.delete('highlight')
-        window.history.replaceState({}, '', url.toString())
-      }
+      // Remove the highlight parameter from URL so it doesn't repeat
+      const url = new URL(window.location.href)
+      url.searchParams.delete('highlight')
+      window.history.replaceState({}, '', url.toString())
     }
-  }, [messages.length > 0]) // Only trigger when messages first load
+  }, []) // Only trigger on component mount
+
+
+  // Add scroll listener for infinite scrolling and detecting if user is at present
+  useEffect(() => {
+    const chatContainer = document.getElementById('chat-messages-container')
+    if (!chatContainer) return
+
+    const handleScroll = () => {
+      const scrollTop = chatContainer.scrollTop
+      const scrollHeight = chatContainer.scrollHeight
+      const clientHeight = chatContainer.clientHeight
+      const scrollBottom = scrollHeight - scrollTop - clientHeight
+
+      // Check if user scrolled near the top (for loading older messages)
+      if (scrollTop < 200 && hasMoreOld && !isLoadingMore) {
+        console.log('📜 Near top, loading more old messages...')
+        loadMoreOldMessages()
+      }
+
+      // Simple static button logic - show when not at bottom
+      const nearBottom = scrollBottom < 100
+      setIsAtPresent(nearBottom)
+    }
+
+    chatContainer.addEventListener('scroll', handleScroll)
+    return () => chatContainer.removeEventListener('scroll', handleScroll)
+  }, [hasMoreOld, isLoadingMore, loadMoreOldMessages])
 
   return (
     <div className="max-w-4xl mx-auto h-screen flex flex-col bg-white">
@@ -460,10 +520,36 @@ export default function ChatPage() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div id="chat-messages-container" className="flex-1 overflow-y-auto p-4 space-y-4 relative">
         {error && (
           <div className="bg-red-50 text-red-700 p-3 rounded-md text-sm">
             {error}
+          </div>
+        )}
+
+        {/* Loading indicator for older messages */}
+        {isLoadingMore && (
+          <div className="flex items-center justify-center p-4">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+            <span className="ml-2 text-sm text-gray-600">Loading older messages...</span>
+          </div>
+        )}
+
+        {/* Scroll to present button */}
+        {!isAtPresent && (
+          <div className="fixed bottom-20 right-6 z-50">
+            <Button
+              onClick={scrollToPresent}
+              disabled={isLoading}
+              className="rounded-full shadow-lg bg-blue-600 hover:bg-blue-700 text-white px-4 py-2"
+            >
+              {isLoading ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              ) : (
+                <span className="mr-2">↓</span>
+              )}
+              Jump to Present
+            </Button>
           </div>
         )}
 
