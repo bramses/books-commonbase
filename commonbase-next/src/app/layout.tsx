@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Navigation } from "@/components/navigation";
 import { Footer } from "@/components/footer";
 import { ClientProviders } from "@/components/client-providers";
+import { DevUserSwitcher } from "@/components/dev-user-switcher";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -36,6 +37,7 @@ export default function RootLayout({
             {children}
           </main>
           <Footer />
+          <DevUserSwitcher className="fixed bottom-4 left-4 w-64 z-50" />
         </ClientProviders>
       </body>
     </html>

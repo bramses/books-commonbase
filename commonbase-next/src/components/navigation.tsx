@@ -102,6 +102,14 @@ export function Navigation() {
             >
               <Link href="/graph">Graph</Link>
             </Button>
+
+            <Button
+              variant={isActive('/chat') ? 'default' : 'ghost'}
+              size="sm"
+              asChild
+            >
+              <Link href="/chat">💬 Chat</Link>
+            </Button>
           </div>
 
           {/* Mobile Navigation */}
@@ -143,6 +151,14 @@ export function Navigation() {
               asChild
             >
               <Link href="/ledger" className="p-2">📚</Link>
+            </Button>
+
+            <Button
+              variant={isActive('/chat') ? 'default' : 'ghost'}
+              size="sm"
+              asChild
+            >
+              <Link href="/chat" className="p-2">💬</Link>
             </Button>
           </div>
         </div>

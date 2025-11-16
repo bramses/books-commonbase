@@ -14,6 +14,7 @@ import { ExternalLink, ChevronDown, Database } from 'lucide-react';
 import { extractUrls, fetchUrlTitle } from '@/lib/url-utils';
 import { DemoModeCallout } from '@/components/demo-mode-callout';
 import { SimilarityScatterPlot } from '@/components/similarity-scatter-plot';
+import { ChatMessageReference } from '@/components/chat-message-reference';
 import YouTube from 'react-youtube';
 import { extractYouTubeVideoId, isYouTubeUrl } from '@/lib/youtube-utils';
 import ReactMarkdown from 'react-markdown';
@@ -394,7 +395,9 @@ export default function EntryPage() {
   return (
     <div className="container mx-auto py-4 sm:py-8 space-y-4 sm:space-y-6 px-4">
       {isDemoMode && <DemoModeCallout />}
-      
+
+      <ChatMessageReference commonbaseId={entry.id} />
+
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start space-y-2 sm:space-y-0">
